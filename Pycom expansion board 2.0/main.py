@@ -9,7 +9,6 @@ import ubinascii
 #from deepsleep import DeepSleep
 import deepsleep
 
-free = 0
 ds = DeepSleep()
 
 # Wireless network
@@ -44,7 +43,7 @@ client.connect()
 
 
 while True:
-	 datas = {'Total memory': gc.mem_free()+gc.mem_alloc(),'Free memory': gc.mem_free(),'Allocated memory': gc.mem_alloc()}
+     datas = {'Total memory': gc.mem_free()+gc.mem_alloc(),'Free memory': gc.mem_free(),'Allocated memory': gc.mem_alloc()}
      datas_json = ujson.dumps(datas)
      print("Sending datas : Total Memory , Free Memory, Allocated Memory")
      client.publish("citisim/pycom/Loic", datas_json)
