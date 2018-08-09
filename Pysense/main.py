@@ -29,7 +29,7 @@ si = SI7006A20(py) # Returns temperature in deg C and relative humidity RH
 lt = LTR329ALS01(py) # Returns blue and red light intensity in lux
 # li = LIS2HH12(py)
 
-# Adafruit/graphite... IO (AIO) configuration
+# MQTT configuration
 AIO_SERVER = "mqtt.beia-telemetrie.ro"
 AIO_PORT = 1883
 AIO_CLIENT_ID = ubinascii.hexlify(machine.unique_id()) # Can be anything
