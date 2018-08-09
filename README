@@ -1,0 +1,3 @@
+You can use my project to connect pycom devices to a broker via MQTT.
+Don't forget, first, to change the files pymakr.conf and to install drivers and IDE before, according 
+the official documentation : https://docs.pycom.io/chapter/gettingstarted/
