@@ -1,12 +1,12 @@
 from network import WLAN
 from mqtt import MQTTClient
 import machine
-from machine import Pin, Timer
+#from machine import Pin, Timer
 import ujson
 import time
-import gc
+#import gc
 import ubinascii
-from deepsleep import DeepSleep
+#from deepsleep import DeepSleep
 import deepsleep
 from LIS2HH12 import LIS2HH12
 from pytrack import Pytrack
@@ -21,7 +21,7 @@ WIFI_PASS = "beialancom"
 py = Pytrack()
 acc = LIS2HH12()
 
-# Adafruit/graphite... IO (AIO) configuration
+# MQTT configuration
 AIO_SERVER = "mqtt.beia-telemetrie.ro"
 AIO_PORT = 1883
 AIO_CLIENT_ID = ubinascii.hexlify(machine.unique_id()) # Can be anything
