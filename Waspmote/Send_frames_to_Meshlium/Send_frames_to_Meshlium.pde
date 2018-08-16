@@ -156,7 +156,7 @@ void loop()
   ////////////////////////////////////////////////
   // 5. Sleep
   ////////////////////////////////////////////////
-  Sleep(10);
+  Sleep(60);
 
   USB.ON();
   USB.println(F("6. Wake up!!\n\n"));
@@ -190,8 +190,8 @@ void Init_SD()
   }
 
    // Initialise position
-   if( position < SD.numln(filename) )
-       position = SD.numln(filename) + 4 ;
+  // if( position < SD.numln(filename) )
+  //     position = SD.numln(filename) + 4 ;
 }
 
 void Init_USB()
@@ -331,9 +331,24 @@ void Send_NOK_frame()
         error = _4G.sendFrameToMeshlium( host, port, frameSD , lengthSD);
         if ( error == 0)
     {
-      //add a function : write a frame in the sd card
       USB.println(F(" Done !"));
-      position = position + 5 ;
+        sd_answer = SD.appendln(filename, "*____________NEW FRAME____________*");
+        for(int i = 3 ; i > 0 ; i--)
+        {
+        SD.catln( filename, position - i , 1);
+        sd_answer = SD.append(filename,SD.buffer);
+        }
+        sd_answer = SD.appendln(filename,"OK");
+        if( sd_answer == 1 )
+        {
+          USB.println(F("New frame appended to file"));
+        }
+         else 
+        {
+          USB.println(F("New frame append failed"));
+        }
+         position = position + 5 ;
+         
     }
      else
     {
