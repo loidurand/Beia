@@ -28,6 +28,18 @@
 #include <Wasp4G.h>
 #include <WaspFrame.h>
 
+void Init_SD();
+void Init_USB();
+void Init_4G();
+void Display_RSSI();
+void New_frame();
+void Save_frame();
+void Send_frame();
+void Send_NOK_frame();
+void Sleep(int tps);
+
+
+
 uint8_t connection_status;
 uint8_t sd_answer;
 char buff_RSSI[20]= "";
@@ -67,8 +79,96 @@ int error;
 
 void setup()
 {
+  Init_USB();
+  Init_SD();
+  Init_4G();
+}
+
+void loop()
+{
+  
+  //////////////////////////////////////////////////
+  // 1. Switch ON
+  //////////////////////////////////////////////////
+  SD.ON();
+  RTC.ON();
+ 
+  error = _4G.ON();
+  if(error == 0)
+  {
+    USB.println(F("1. 4G module ready..."));
+     ////////////////////////////////////////////////
+    // 1.1. Check connection to network and continue
+    ////////////////////////////////////////////////
+    connection_status = _4G.checkDataConnection(30);
+    if (connection_status == 0)
+    {
+      USB.println(F("1.1. Module connected to network"));
+      // delay for network parameters stabilization
+      //delay(5000);
+      
+      //////////////////////////////////////////////
+      // 1.2. Get RSSI
+      //////////////////////////////////////////////
+      error = _4G.getRSSI();
+      if (error == 0)
+      {
+        Display_RSSI();
+        ////////////////////////////////////////////////
+        // 2. Create new frame
+        ////////////////////////////////////////////////
+        New_frame();
+        /////////////////////////////////////////////////////   
+        // 3. Append data into file
+        /////////////////////////////////////////////////////  
+        Save_frame();
+       ////////////////////////////////////////////////
+       // 4. Send to Meshlium
+       ////////////////////////////////////////////////
+       Send_frame();
+      }
+      else
+      {
+        USB.println(F("1.2. Error calling 'getRSSI' function"));
+      }
+    }
+    else
+    {
+      USB.println(F("1.3. Error calling 'getNetworkType' function"));
+    }
+    ////////////////////////////////////////////////
+   // 5. Try again to send the unsend frames to Meshlium
+  ////////////////////////////////////////////////
+  Send_NOK_frame();   
+  }
+  else
+  {
+    // Problem with the communication with the 4G module
+    USB.println(F("4G module not started"));
+    USB.print(F("Error code: "));
+    USB.println(error, DEC);
+  }
+  ////////////////////////////////////////////////
+  // 4. Powers off the 4G module
+  ////////////////////////////////////////////////
+  USB.println(F("4. Switch OFF 4G module"));
+  _4G.OFF();
+  ////////////////////////////////////////////////
+  // 5. Sleep
+  ////////////////////////////////////////////////
+  Sleep(10);
+
   USB.ON();
-  USB.println(F("Start program"));
+  USB.println(F("6. Wake up!!\n\n"));
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+void Init_SD()
+{
   
   // SD file 
   ///////////////////////////////////////
@@ -92,17 +192,23 @@ void setup()
    // Initialise position
    if( position < SD.numln(filename) )
        position = SD.numln(filename) + 4 ;
-       
+}
 
-  ///////////////////////////////////////
-
+void Init_USB()
+{
+  USB.ON();
+  USB.println(F("Start program")); 
+  
   // Show the remaining battery level
   // it's safer to run the program with a battery level > 50%  
   USB.print(F("Battery Level: "));
   USB.print(PWR.getBatteryLevel(),DEC);
   USB.print(F("%\n"));
+}
 
-  // set the Waspmote ID
+void Init_4G()
+{
+ // set the Waspmote ID
   frame.setID(moteID);
   RTC.ON();
 
@@ -115,88 +221,53 @@ void setup()
   // 2. Show APN settings via USB port
   //////////////////////////////////////////////////
   _4G.show_APN();
-
 }
 
-
-void loop()
+void Display_RSSI()
 {
+    USB.print(F("1.2. RSSI: "));
+    USB.print(_4G._rssi, DEC);
+    USB.println(F(" dBm"));
+    sprintf(buff_RSSI,"RSSI : %d dBm",_4G._rssi);
+     // USB.print(buff_RSSI);
+}
 
-  
-  //////////////////////////////////////////////////
-  // 1. Switch ON
-  //////////////////////////////////////////////////
-  SD.ON();
-  RTC.ON();
-  
-  error = _4G.ON();
-  if(error == 0)
-  {
-    USB.println(F("1. 4G module ready..."));
-
-     ////////////////////////////////////////////////
-    // 1.1. Check connection to network and continue
-    ////////////////////////////////////////////////
-    connection_status = _4G.checkDataConnection(30);
-    
-    if (connection_status == 0)
-    {
-      USB.println(F("1.1. Module connected to network"));
-
-      // delay for network parameters stabilization
-      //delay(5000);
-
-      //////////////////////////////////////////////
-      // 1.2. Get RSSI
-      //////////////////////////////////////////////
-      error = _4G.getRSSI();
-      if (error == 0)
-      {
-        USB.print(F("1.2. RSSI: "));
-        USB.print(_4G._rssi, DEC);
-        USB.println(F(" dBm"));
-        sprintf(buff_RSSI,"RSSI : %d dBm",_4G._rssi);
-       // USB.print(buff_RSSI);
-        
-    ////////////////////////////////////////////////
-    // 2. Create new frame
-    ////////////////////////////////////////////////
-    
+void New_frame()
+{
     // Create new frame (ASCII)
     frame.createFrame(ASCII);
 
-    
     // add frame fields
     frame.addSensor(SENSOR_TIME, RTC.hour, RTC.minute, RTC.second);
     frame.addSensor(SENSOR_STR, buff_RSSI);
     frame.addSensor(SENSOR_BAT, PWR.getBatteryLevel()); 
+}
 
-  /////////////////////////////////////////////////////   
-  // 2. Append data into file
-  /////////////////////////////////////////////////////  
-  
-  // Conversion from Binary to ASCII
-  Utils.hex2str( frame.buffer, toWrite, frame.length);
-  
-  sd_answer = SD.appendln(filename, "*____________NEW FRAME____________*");
-  sd_answer = SD.appendln(filename,RTC.getTime());
-  sprintf(flength, "%d",frame.length);
-  sd_answer = SD.appendln(filename,flength);
-  sd_answer = SD.appendln(filename,toWrite);
-  //sd_answer = SD.appendln(filename,frame.buffer);
-  if( sd_answer == 1 )
-  {
-    USB.println(F("New frame appended to file"));
-  }
-  else 
-  {
-    USB.println(F("New frame append failed"));
-  }
 
+void Save_frame()
+{
+     // Conversion from Binary to ASCII
+    Utils.hex2str( frame.buffer, toWrite, frame.length);
   
-    ////////////////////////////////////////////////
-    // 3. Send to Meshlium
-    ////////////////////////////////////////////////
+    sd_answer = SD.appendln(filename, "*____________NEW FRAME____________*");
+    sd_answer = SD.appendln(filename,RTC.getTime());
+    sprintf(flength, "%d",frame.length);
+    sd_answer = SD.appendln(filename,flength);
+    sd_answer = SD.appendln(filename,toWrite);
+    //sd_answer = SD.appendln(filename,frame.buffer);
+    if( sd_answer == 1 )
+    {
+      USB.println(F("New frame appended to file"));
+    }
+    else 
+    {
+     USB.println(F("New frame append failed"));
+    }
+  
+}
+
+void Send_frame()
+{
     USB.print(F("Sending the frame..."));
     error = _4G.sendFrameToMeshlium( host, port, frame.buffer, frame.length);
 
@@ -234,20 +305,11 @@ void loop()
         USB.println(F("New frame append failed"));
       }
     }
-    
-  }
-      else
-      {
-        USB.println(F("1.2. Error calling 'getRSSI' function"));
-      }
-  }
-  else
-      {
-        USB.println(F("1.3. Error calling 'getNetworkType' function"));
-      }
-      
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Send the unsend frames
+}
+
+void Send_NOK_frame()
+{
+   // Send the unsend frames
     do
     {
     // Get 'OK/NOK' line -> SD.buffer
@@ -286,37 +348,25 @@ void loop()
       }
     }
     while( (SD.buffer[0] == 'O') && (SD.buffer[1] == 'K') && (position < (SD.numln(filename) + 5)) );
-        
-  }
-  else
-  {
-    // Problem with the communication with the 4G module
-    USB.println(F("4G module not started"));
-    USB.print(F("Error code: "));
-    USB.println(error, DEC);
-  }
+}
 
-
+void Sleep(int tps)
+{
+  int i = 0 ;
   
-  ////////////////////////////////////////////////
-  // 4. Powers off the 4G module
-  ////////////////////////////////////////////////
-  USB.println(F("4. Switch OFF 4G module"));
-  _4G.OFF();
-
-
-  ////////////////////////////////////////////////
-  // 5. Sleep
-  ////////////////////////////////////////////////
    USB.println(F("enter sleep"));
   // Go to sleep disconnecting all the switches and modules
   // After 8 seconds, Waspmote wakes up thanks to internal watchdog
-  PWR.sleep(WTD_8S, ALL_OFF);
-  //PWR.deepSleep(“00:00:00:10”, RTC_OFFSET, RTC_ALM1_MODE2,ALL_OFF);
-
-  USB.ON();
-  USB.println(F("6. Wake up!!\n\n"));
-
+  for(i = 0 ; i < tps ; i++)
+  PWR.sleep(WTD_1S, ALL_OFF);
+  //PWR.deepSleep(“00:00:00:10”, RTC_OFFSET, RTC_ALM1_MODE2,ALL_OFF); 
 }
 
 
+
+ 
+
+  
+
+
+    
