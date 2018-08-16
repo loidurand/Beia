@@ -356,7 +356,7 @@ void Sleep(int tps)
   
    USB.println(F("enter sleep"));
   // Go to sleep disconnecting all the switches and modules
-  // After 8 seconds, Waspmote wakes up thanks to internal watchdog
+  // After tps seconds, Waspmote wakes up thanks to internal watchdog
   for(i = 0 ; i < tps ; i++)
   PWR.sleep(WTD_1S, ALL_OFF);
   //PWR.deepSleep(“00:00:00:10”, RTC_OFFSET, RTC_ALM1_MODE2,ALL_OFF); 
