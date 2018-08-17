@@ -104,8 +104,10 @@ void loop()
     if (connection_status == 0)
     {
       USB.println(F("1.1. Module connected to network"));
-      // delay for network parameters stabilization
-      //delay(5000);
+      // Set RTC time from 4G network
+      _4G.setTimeFrom4G();
+     // USB.println(RTC.getTime());
+     // USB.println(RTC.getTimestamp());
       
       //////////////////////////////////////////////
       // 1.2. Get RSSI
